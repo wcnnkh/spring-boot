@@ -117,9 +117,10 @@ class ConfigDataEnvironmentContributors implements Iterable<ConfigDataEnvironmen
 					result, contributor, activationContext);
 			ConfigDataLoaderContext loaderContext = new ContributorDataLoaderContext(this);
 			List<ConfigDataLocation> imports = contributor.getImports();
+			boolean resolveProfileSpecific = !contributor.isFromProfileSpecificImport();
 			this.logger.trace(LogMessage.format("Processing imports %s", imports));
 			Map<ConfigDataResolutionResult, ConfigData> imported = importer.resolveAndLoad(activationContext,
-					locationResolverContext, loaderContext, imports);
+					locationResolverContext, loaderContext, imports, resolveProfileSpecific);
 			this.logger.trace(LogMessage.of(() -> getImportedMessage(imported.keySet())));
 			ConfigDataEnvironmentContributor contributorAndChildren = contributor.withChildren(importPhase,
 					asContributors(imported));
@@ -217,7 +218,7 @@ class ConfigDataEnvironmentContributors implements Iterable<ConfigDataEnvironmen
 	private Binder getBinder(ConfigDataActivationContext activationContext,
 			Predicate<ConfigDataEnvironmentContributor> filter, Set<BinderOption> options) {
 		boolean failOnInactiveSource = options.contains(BinderOption.FAIL_ON_BIND_TO_INACTIVE_SOURCE);
-		Iterable<ConfigurationPropertySource> sources = () -> getBinderSources(activationContext,
+		Iterable<ConfigurationPropertySource> sources = () -> getBinderSources(
 				filter.and((contributor) -> failOnInactiveSource || contributor.isActive(activationContext)));
 		PlaceholdersResolver placeholdersResolver = new ConfigDataEnvironmentContributorPlaceholdersResolver(this.root,
 				activationContext, failOnInactiveSource);
@@ -225,8 +226,7 @@ class ConfigDataEnvironmentContributors implements Iterable<ConfigDataEnvironmen
 		return new Binder(sources, placeholdersResolver, null, null, bindHandler);
 	}
 
-	private Iterator<ConfigurationPropertySource> getBinderSources(ConfigDataActivationContext activationContext,
-			Predicate<ConfigDataEnvironmentContributor> filter) {
+	private Iterator<ConfigurationPropertySource> getBinderSources(Predicate<ConfigDataEnvironmentContributor> filter) {
 		return this.root.stream().filter(this::hasConfigurationPropertySource).filter(filter)
 				.map(ConfigDataEnvironmentContributor::getConfigurationPropertySource).iterator();
 	}

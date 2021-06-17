@@ -148,10 +148,10 @@ public class LogbackLoggingSystem extends Slf4JLoggingSystem {
 		}
 		Environment environment = initializationContext.getEnvironment();
 		// Apply system properties directly in case the same JVM runs multiple apps
-		new LoggingSystemProperties(environment, context::putProperty).apply(logFile);
+		new LogbackLoggingSystemProperties(environment, context::putProperty).apply(logFile);
 		LogbackConfigurator configurator = debug ? new DebugLogbackConfigurator(context)
 				: new LogbackConfigurator(context);
-		new DefaultLogbackConfiguration(initializationContext, logFile).apply(configurator);
+		new DefaultLogbackConfiguration(logFile).apply(configurator);
 		context.setPackagingDataEnabled(true);
 	}
 
@@ -281,7 +281,7 @@ public class LogbackLoggingSystem extends Slf4JLoggingSystem {
 
 	@Override
 	public Runnable getShutdownHandler() {
-		return new ShutdownHandler();
+		return () -> getLoggerContext().stop();
 	}
 
 	private ch.qos.logback.classic.Logger getLogger(String name) {
@@ -328,22 +328,13 @@ public class LogbackLoggingSystem extends Slf4JLoggingSystem {
 		loggerContext.removeObject(LoggingSystem.class.getName());
 	}
 
-	private final class ShutdownHandler implements Runnable {
-
-		@Override
-		public void run() {
-			getLoggerContext().stop();
-		}
-
-	}
-
 	/**
 	 * {@link LoggingSystemFactory} that returns {@link LogbackLoggingSystem} if possible.
 	 */
 	@Order(Ordered.LOWEST_PRECEDENCE)
 	public static class Factory implements LoggingSystemFactory {
 
-		private static final boolean PRESENT = ClassUtils.isPresent("ch.qos.logback.core.Appender",
+		private static final boolean PRESENT = ClassUtils.isPresent("ch.qos.logback.classic.LoggerContext",
 				Factory.class.getClassLoader());
 
 		@Override

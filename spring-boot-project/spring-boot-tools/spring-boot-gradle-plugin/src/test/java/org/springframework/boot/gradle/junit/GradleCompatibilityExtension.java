@@ -47,13 +47,11 @@ final class GradleCompatibilityExtension implements TestTemplateInvocationContex
 
 	static {
 		JavaVersion javaVersion = JavaVersion.current();
-		if (javaVersion.isCompatibleWith(JavaVersion.VERSION_14)
-				|| javaVersion.isCompatibleWith(JavaVersion.VERSION_13)) {
-			GRADLE_VERSIONS = Arrays.asList("6.3", "6.4.1", "6.5.1", "6.6.1", "6.7.1", "current", "7.0-milestone-1");
+		if (javaVersion.isCompatibleWith(JavaVersion.VERSION_16)) {
+			GRADLE_VERSIONS = Arrays.asList("7.0.2", "7.1");
 		}
 		else {
-			GRADLE_VERSIONS = Arrays.asList("5.6.4", "6.3", "6.4.1", "6.5.1", "6.6.1", "6.7.1", "current",
-					"7.0-milestone-1");
+			GRADLE_VERSIONS = Arrays.asList("6.8.3", "current", "7.0.2", "7.1");
 		}
 	}
 
@@ -76,7 +74,7 @@ final class GradleCompatibilityExtension implements TestTemplateInvocationContex
 			List<TestTemplateInvocationContext> invocationContexts = new ArrayList<>();
 			invocationContexts.add(new GradleVersionTestTemplateInvocationContext(version, false));
 			boolean configurationCache = gradleCompatibility.configurationCache();
-			if (configurationCache && GradleVersion.version(version).compareTo(GradleVersion.version("6.7")) >= 0) {
+			if (configurationCache) {
 				invocationContexts.add(new GradleVersionTestTemplateInvocationContext(version, true));
 			}
 			return invocationContexts.stream();

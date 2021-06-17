@@ -17,12 +17,12 @@
 package org.springframework.boot.gradle.tasks.bundling;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.TaskOutcome;
 import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.api.condition.DisabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import org.springframework.boot.gradle.junit.GradleCompatibility;
 import org.springframework.boot.gradle.testkit.GradleBuild;
@@ -34,13 +34,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Andy Wilkinson
  */
+@DisabledForJreRange(min = JRE.JAVA_16)
 @GradleCompatibility(versionsLessThan = "7.0-milestone-1")
 class MavenIntegrationTests {
 
 	GradleBuild gradleBuild;
 
 	@TestTemplate
-	void bootJarCanBeUploaded() throws FileNotFoundException, IOException {
+	void bootJarCanBeUploaded() {
 		BuildResult result = this.gradleBuild.expectDeprecationWarningsWithAtLeastVersion("6.0.0")
 				.build("uploadBootArchives");
 		assertThat(result.task(":uploadBootArchives").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
@@ -50,7 +51,7 @@ class MavenIntegrationTests {
 	}
 
 	@TestTemplate
-	void bootWarCanBeUploaded() throws IOException {
+	void bootWarCanBeUploaded() {
 		BuildResult result = this.gradleBuild.expectDeprecationWarningsWithAtLeastVersion("6.0.0")
 				.build("uploadBootArchives");
 		assertThat(result.task(":uploadBootArchives").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);

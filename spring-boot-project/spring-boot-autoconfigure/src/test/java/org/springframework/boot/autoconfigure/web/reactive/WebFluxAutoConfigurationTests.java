@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import javax.validation.ValidatorFactory;
 
@@ -39,8 +40,11 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration;
 import org.springframework.boot.autoconfigure.validation.ValidatorAdapter;
+import org.springframework.boot.autoconfigure.web.reactive.WebFluxAutoConfiguration.WebFluxConfig;
+import org.springframework.boot.test.context.runner.ContextConsumer;
 import org.springframework.boot.test.context.runner.ReactiveWebApplicationContextRunner;
 import org.springframework.boot.web.codec.CodecCustomizer;
+import org.springframework.boot.web.reactive.context.ReactiveWebApplicationContext;
 import org.springframework.boot.web.reactive.filter.OrderedHiddenHttpMethodFilter;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -66,6 +70,7 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.filter.reactive.HiddenHttpMethodFilter;
 import org.springframework.web.reactive.HandlerMapping;
 import org.springframework.web.reactive.accept.RequestedContentTypeResolver;
+import org.springframework.web.reactive.config.DelegatingWebFluxConfiguration;
 import org.springframework.web.reactive.config.WebFluxConfigurationSupport;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 import org.springframework.web.reactive.function.server.support.RouterFunctionMapping;
@@ -80,9 +85,14 @@ import org.springframework.web.reactive.result.method.annotation.RequestMappingH
 import org.springframework.web.reactive.result.view.ViewResolutionResultHandler;
 import org.springframework.web.reactive.result.view.ViewResolver;
 import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebSession;
+import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
 import org.springframework.web.server.i18n.AcceptHeaderLocaleContextResolver;
 import org.springframework.web.server.i18n.FixedLocaleContextResolver;
 import org.springframework.web.server.i18n.LocaleContextResolver;
+import org.springframework.web.server.session.CookieWebSessionIdResolver;
+import org.springframework.web.server.session.WebSessionIdResolver;
+import org.springframework.web.server.session.WebSessionManager;
 import org.springframework.web.util.pattern.PathPattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -120,6 +130,8 @@ class WebFluxAutoConfigurationTests {
 			assertThat(context).getBeans(RequestMappingHandlerAdapter.class).hasSize(1);
 			assertThat(context).getBeans(RequestedContentTypeResolver.class).hasSize(1);
 			assertThat(context).getBeans(RouterFunctionMapping.class).hasSize(1);
+			assertThat(context.getBean(WebHttpHandlerBuilder.WEB_SESSION_MANAGER_BEAN_NAME, WebSessionManager.class))
+					.isNotNull();
 			assertThat(context.getBean("resourceHandlerMapping", HandlerMapping.class)).isNotNull();
 		});
 	}
@@ -544,12 +556,61 @@ class WebFluxAutoConfigurationTests {
 				});
 	}
 
+	@Test
+	@SuppressWarnings("rawtypes")
+	void userConfigurersCanBeOrderedBeforeOrAfterTheAutoConfiguredConfigurer() {
+		this.contextRunner.withBean(HighPrecedenceConfigurer.class, HighPrecedenceConfigurer::new)
+				.withBean(LowPrecedenceConfigurer.class, LowPrecedenceConfigurer::new)
+				.run((context) -> assertThat(context.getBean(DelegatingWebFluxConfiguration.class))
+						.extracting("configurers.delegates").asList()
+						.extracting((configurer) -> (Class) configurer.getClass()).containsExactly(
+								HighPrecedenceConfigurer.class, WebFluxConfig.class, LowPrecedenceConfigurer.class));
+	}
+
+	@Test
+	void customWebSessionIdResolverShouldBeApplied() {
+		this.contextRunner.withUserConfiguration(CustomWebSessionIdResolver.class).run(assertExchangeWithSession(
+				(exchange) -> assertThat(exchange.getResponse().getCookies().get("TEST")).isNotEmpty()));
+	}
+
+	@Test
+	void customSameSiteConfigurationShouldBeApplied() {
+		this.contextRunner.withPropertyValues("spring.webflux.session.cookie.same-site:strict").run(
+				assertExchangeWithSession((exchange) -> assertThat(exchange.getResponse().getCookies().get("SESSION"))
+						.isNotEmpty().allMatch((cookie) -> cookie.getSameSite().equals("Strict"))));
+	}
+
+	private ContextConsumer<ReactiveWebApplicationContext> assertExchangeWithSession(
+			Consumer<MockServerWebExchange> exchange) {
+		return (context) -> {
+			MockServerHttpRequest request = MockServerHttpRequest.get("/").build();
+			MockServerWebExchange webExchange = MockServerWebExchange.from(request);
+			WebSessionManager webSessionManager = context.getBean(WebSessionManager.class);
+			WebSession webSession = webSessionManager.getSession(webExchange).block();
+			webSession.start();
+			webExchange.getResponse().setComplete().block();
+			exchange.accept(webExchange);
+		};
+	}
+
 	private Map<PathPattern, Object> getHandlerMap(ApplicationContext context) {
 		HandlerMapping mapping = context.getBean("resourceHandlerMapping", HandlerMapping.class);
 		if (mapping instanceof SimpleUrlHandlerMapping) {
 			return ((SimpleUrlHandlerMapping) mapping).getHandlerMap();
 		}
 		return Collections.emptyMap();
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class CustomWebSessionIdResolver {
+
+		@Bean
+		WebSessionIdResolver webSessionIdResolver() {
+			CookieWebSessionIdResolver resolver = new CookieWebSessionIdResolver();
+			resolver.setCookieName("TEST");
+			return resolver;
+		}
+
 	}
 
 	@Configuration(proxyBeanMethods = false)
@@ -784,6 +845,16 @@ class WebFluxAutoConfigurationTests {
 		@Override
 		public void setLocaleContext(ServerWebExchange exchange, LocaleContext localeContext) {
 		}
+
+	}
+
+	@Order(-100)
+	static class HighPrecedenceConfigurer implements WebFluxConfigurer {
+
+	}
+
+	@Order(100)
+	static class LowPrecedenceConfigurer implements WebFluxConfigurer {
 
 	}
 

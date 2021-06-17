@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors.
+ * Copyright 2012-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,13 +74,18 @@ class ConfigurationMetadataAnnotationProcessorTests extends AbstractMetadataGene
 		assertThat(new ConfigurationMetadataAnnotationProcessor().getSupportedAnnotationTypes())
 				.containsExactlyInAnyOrder("org.springframework.boot.context.properties.ConfigurationProperties",
 						"org.springframework.context.annotation.Configuration",
-						"org.springframework.boot.actuate.endpoint.annotation.Endpoint");
+						"org.springframework.boot.actuate.endpoint.annotation.Endpoint",
+						"org.springframework.boot.actuate.endpoint.jmx.annotation.JmxEndpoint",
+						"org.springframework.boot.actuate.endpoint.web.annotation.ControllerEndpoint",
+						"org.springframework.boot.actuate.endpoint.web.annotation.RestControllerEndpoint",
+						"org.springframework.boot.actuate.endpoint.web.annotation.ServletEndpoint",
+						"org.springframework.boot.actuate.endpoint.web.annotation.WebEndpoint");
 	}
 
 	@Test
 	void notAnnotated() {
 		ConfigurationMetadata metadata = compile(NotAnnotated.class);
-		assertThat(metadata.getItems()).isEmpty();
+		assertThat(metadata).isNull();
 	}
 
 	@Test
@@ -238,7 +243,7 @@ class ConfigurationMetadataAnnotationProcessorTests extends AbstractMetadataGene
 	}
 
 	@Test
-	void parseArrayConfig() throws Exception {
+	void parseArrayConfig() {
 		ConfigurationMetadata metadata = compile(SimpleArrayProperties.class);
 		assertThat(metadata).has(Metadata.withGroup("array").ofType(SimpleArrayProperties.class));
 		assertThat(metadata).has(Metadata.withProperty("array.primitive", "java.lang.Integer[]"));

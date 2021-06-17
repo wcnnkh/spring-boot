@@ -46,9 +46,7 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 
 import org.gradle.testkit.runner.BuildResult;
-import org.gradle.testkit.runner.InvalidRunnerConfigurationException;
 import org.gradle.testkit.runner.TaskOutcome;
-import org.gradle.testkit.runner.UnexpectedBuildFailure;
 import org.junit.jupiter.api.TestTemplate;
 
 import org.springframework.boot.gradle.testkit.GradleBuild;
@@ -86,14 +84,13 @@ abstract class AbstractBootArchiveIntegrationTests {
 	}
 
 	@TestTemplate
-	void basicBuild() throws InvalidRunnerConfigurationException, UnexpectedBuildFailure, IOException {
+	void basicBuild() {
 		assertThat(this.gradleBuild.build(this.taskName).task(":" + this.taskName).getOutcome())
 				.isEqualTo(TaskOutcome.SUCCESS);
 	}
 
 	@TestTemplate
-	void reproducibleArchive()
-			throws InvalidRunnerConfigurationException, UnexpectedBuildFailure, IOException, InterruptedException {
+	void reproducibleArchive() throws IOException, InterruptedException {
 		assertThat(this.gradleBuild.build(this.taskName).task(":" + this.taskName).getOutcome())
 				.isEqualTo(TaskOutcome.SUCCESS);
 		File jar = new File(this.gradleBuild.getProjectDir(), "build/libs").listFiles()[0];
@@ -106,7 +103,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 	}
 
 	@TestTemplate
-	void upToDateWhenBuiltTwice() throws InvalidRunnerConfigurationException, UnexpectedBuildFailure, IOException {
+	void upToDateWhenBuiltTwice() {
 		assertThat(this.gradleBuild.build(this.taskName).task(":" + this.taskName).getOutcome())
 				.isEqualTo(TaskOutcome.SUCCESS);
 		assertThat(this.gradleBuild.build(this.taskName).task(":" + this.taskName).getOutcome())
@@ -114,8 +111,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 	}
 
 	@TestTemplate
-	void upToDateWhenBuiltTwiceWithLaunchScriptIncluded()
-			throws InvalidRunnerConfigurationException, UnexpectedBuildFailure, IOException {
+	void upToDateWhenBuiltTwiceWithLaunchScriptIncluded() {
 		assertThat(this.gradleBuild.build("-PincludeLaunchScript=true", this.taskName).task(":" + this.taskName)
 				.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
 		assertThat(this.gradleBuild.build("-PincludeLaunchScript=true", this.taskName).task(":" + this.taskName)
@@ -167,7 +163,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 	}
 
 	@TestTemplate
-	void duplicatesAreHandledGracefully() throws IOException {
+	void duplicatesAreHandledGracefully() {
 		assertThat(this.gradleBuild.build(this.taskName).task(":" + this.taskName).getOutcome())
 				.isEqualTo(TaskOutcome.SUCCESS);
 	}
@@ -230,8 +226,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 	}
 
 	@TestTemplate
-	void upToDateWhenBuiltWithDefaultLayeredAndThenWithExplicitLayered()
-			throws InvalidRunnerConfigurationException, UnexpectedBuildFailure {
+	void upToDateWhenBuiltWithDefaultLayeredAndThenWithExplicitLayered() {
 		assertThat(this.gradleBuild.scriptProperty("layered", "").build("" + this.taskName).task(":" + this.taskName)
 				.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
 		assertThat(this.gradleBuild.scriptProperty("layered", "layered {}").build("" + this.taskName)
@@ -239,8 +234,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 	}
 
 	@TestTemplate
-	void notUpToDateWhenBuiltWithoutLayersAndThenWithLayers()
-			throws InvalidRunnerConfigurationException, UnexpectedBuildFailure {
+	void notUpToDateWhenBuiltWithoutLayersAndThenWithLayers() {
 		assertThat(this.gradleBuild.scriptProperty("layerEnablement", "enabled = false").build(this.taskName)
 				.task(":" + this.taskName).getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
 		assertThat(this.gradleBuild.scriptProperty("layerEnablement", "enabled = true").build(this.taskName)
@@ -248,8 +242,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 	}
 
 	@TestTemplate
-	void notUpToDateWhenBuiltWithLayerToolsAndThenWithoutLayerTools()
-			throws InvalidRunnerConfigurationException, UnexpectedBuildFailure {
+	void notUpToDateWhenBuiltWithLayerToolsAndThenWithoutLayerTools() {
 		assertThat(this.gradleBuild.scriptProperty("layerTools", "").build(this.taskName).task(":" + this.taskName)
 				.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
 		assertThat(this.gradleBuild.scriptProperty("layerTools", "includeLayerTools = false").build(this.taskName)
@@ -257,7 +250,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 	}
 
 	@TestTemplate
-	void layersWithCustomSourceSet() throws IOException {
+	void layersWithCustomSourceSet() {
 		assertThat(this.gradleBuild.build(this.taskName).task(":" + this.taskName).getOutcome())
 				.isEqualTo(TaskOutcome.SUCCESS);
 	}
@@ -326,6 +319,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 			assertThat(jarFile.getEntry(layerToolsJar)).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "alpha-1.2.3.jar")).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "bravo-1.2.3.jar")).isNotNull();
+			assertThat(jarFile.getEntry(this.libPath + "charlie-1.2.3.jar")).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "commons-lang3-3.9.jar")).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "spring-core-5.2.5.RELEASE.jar")).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "spring-jcl-5.2.5.RELEASE.jar")).isNotNull();
@@ -347,8 +341,9 @@ abstract class AbstractBootArchiveIntegrationTests {
 		assertThat(indexedLayers.get("dependencies")).containsExactlyElementsOf(expectedDependencies);
 		assertThat(indexedLayers.get("spring-boot-loader")).containsExactly("org/");
 		assertThat(indexedLayers.get("snapshot-dependencies")).containsExactlyElementsOf(expectedSnapshotDependencies);
-		assertThat(indexedLayers.get("application")).containsExactly(getExpectedApplicationLayerContents(
-				this.classesPath, this.libPath + "alpha-1.2.3.jar", this.libPath + "bravo-1.2.3.jar"));
+		assertThat(indexedLayers.get("application"))
+				.containsExactly(getExpectedApplicationLayerContents(this.classesPath, this.libPath + "alpha-1.2.3.jar",
+						this.libPath + "bravo-1.2.3.jar", this.libPath + "charlie-1.2.3.jar"));
 		BuildResult listLayers = this.gradleBuild.build("listLayers");
 		assertThat(listLayers.task(":listLayers").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
 		String listLayersOutput = listLayers.getOutput();
@@ -417,6 +412,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 			assertThat(jarFile.getEntry(layerToolsJar)).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "alpha-1.2.3.jar")).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "bravo-1.2.3.jar")).isNotNull();
+			assertThat(jarFile.getEntry(this.libPath + "charlie-1.2.3.jar")).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "commons-lang3-3.9.jar")).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "spring-core-5.2.5.RELEASE.jar")).isNotNull();
 			assertThat(jarFile.getEntry(this.libPath + "spring-jcl-5.2.5.RELEASE.jar")).isNotNull();
@@ -432,6 +428,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 		Set<String> expectedSubprojectDependencies = new TreeSet<>();
 		expectedSubprojectDependencies.add(this.libPath + "alpha-1.2.3.jar");
 		expectedSubprojectDependencies.add(this.libPath + "bravo-1.2.3.jar");
+		expectedSubprojectDependencies.add(this.libPath + "charlie-1.2.3.jar");
 		Set<String> expectedDependencies = new TreeSet<>();
 		expectedDependencies.add(this.libPath + "spring-core-5.2.5.RELEASE.jar");
 		expectedDependencies.add(this.libPath + "spring-jcl-5.2.5.RELEASE.jar");
@@ -492,7 +489,7 @@ abstract class AbstractBootArchiveIntegrationTests {
 	private void writeSettingsGradle() {
 		try (PrintWriter writer = new PrintWriter(
 				new FileWriter(new File(this.gradleBuild.getProjectDir(), "settings.gradle")))) {
-			writer.println("include 'alpha', 'bravo'");
+			writer.println("include 'alpha', 'bravo', 'charlie'");
 		}
 		catch (IOException ex) {
 			throw new RuntimeException(ex);

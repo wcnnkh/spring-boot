@@ -109,9 +109,9 @@
     {
       "name": "logging.register-shutdown-hook",
       "type": "java.lang.Boolean",
-      "description": "Register a shutdown hook for the logging system when it is initialized.",
+      "description": "Register a shutdown hook for the logging system when it is initialized. Disabled automatically when deployed as a war file.",
       "sourceType": "org.springframework.boot.context.logging.LoggingApplicationListener",
-      "defaultValue": false
+      "defaultValue": true
     },
     {
       "name": "logging.pattern.rolling-file-name",
@@ -314,6 +314,11 @@
       "name": "spring.config.use-legacy-processing",
       "type": "java.lang.Boolean",
       "description": "Whether to enable configuration data processing legacy mode.",
+      "defaultValue": false
+    },
+    {
+      "name": "spring.jpa.defer-datasource-initialization",
+      "type": "java.lang.Boolean",
       "defaultValue": false
     },
     {
@@ -907,10 +912,22 @@
       "description": "Comma-separated list of active profiles. Can be overridden by a command line switch."
     },
     {
+      "name": "spring.profiles.default",
+      "type": "java.lang.String",
+      "description": "Name of the profile to enable if no profile is active.",
+      "defaultValue": "default"
+    },
+    {
       "name": "spring.profiles.include",
       "type": "java.util.List<java.lang.String>",
-      "sourceType": "org.springframework.boot.context.config.ConfigFileApplicationListener",
+      "sourceType": "org.springframework.boot.context.config.Profiles",
       "description": "Unconditionally activate the specified comma-separated list of profiles (or list of profiles if using YAML)."
+    },
+    {
+      "name": "spring.profiles.group",
+      "type": "java.util.Map<java.lang.String,java.util.List<java.lang.String>>",
+      "sourceType": "org.springframework.boot.context.config.Profiles",
+      "description": "Profile groups to define a logical name for a related group of profiles."
     },
     {
       "name": "spring.reactor.debug-agent.enabled",

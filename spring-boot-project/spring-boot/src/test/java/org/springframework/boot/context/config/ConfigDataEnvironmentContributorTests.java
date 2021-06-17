@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.cloud.CloudPlatform;
 import org.springframework.boot.context.config.ConfigData.Option;
+import org.springframework.boot.context.config.ConfigData.PropertySourceOptions;
 import org.springframework.boot.context.config.ConfigDataEnvironmentContributor.ImportPhase;
 import org.springframework.boot.context.config.ConfigDataEnvironmentContributor.Kind;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -42,13 +43,14 @@ import static org.mockito.Mockito.mock;
  *
  * @author Phillip Webb
  * @author Madhura Bhave
+ * @author Scott Frederick
  */
 class ConfigDataEnvironmentContributorTests {
 
 	private static final ConfigDataLocation TEST_LOCATION = ConfigDataLocation.of("test");
 
-	private ConfigDataActivationContext activationContext = new ConfigDataActivationContext(CloudPlatform.KUBERNETES,
-			null);
+	private final ConfigDataActivationContext activationContext = new ConfigDataActivationContext(
+			CloudPlatform.KUBERNETES, null);
 
 	@Test
 	void getKindReturnsKind() {
@@ -118,6 +120,16 @@ class ConfigDataEnvironmentContributorTests {
 	void getImportsReturnsImports() {
 		MockPropertySource propertySource = new MockPropertySource();
 		propertySource.setProperty("spring.config.import", "spring,boot");
+		ConfigData configData = new ConfigData(Collections.singleton(propertySource));
+		ConfigDataEnvironmentContributor contributor = createBoundContributor(null, configData, 0);
+		assertThat(contributor.getImports()).containsExactly(ConfigDataLocation.of("spring"),
+				ConfigDataLocation.of("boot"));
+	}
+
+	@Test
+	void getImportsIgnoresEmptyElements() {
+		MockPropertySource propertySource = new MockPropertySource();
+		propertySource.setProperty("spring.config.import", "spring,,boot,");
 		ConfigData configData = new ConfigData(Collections.singleton(propertySource));
 		ConfigDataEnvironmentContributor contributor = createBoundContributor(null, configData, 0);
 		assertThat(contributor.getImports()).containsExactly(ConfigDataLocation.of("spring"),
@@ -204,9 +216,9 @@ class ConfigDataEnvironmentContributorTests {
 				"classpath:application-profile.properties");
 		ConfigDataEnvironmentContributor classpathImports = createBoundContributor("classpath:/");
 		classpathImports = classpathImports.withChildren(ImportPhase.BEFORE_PROFILE_ACTIVATION,
-				Arrays.asList(classpathApplication));
+				Collections.singletonList(classpathApplication));
 		classpathImports = classpathImports.withChildren(ImportPhase.AFTER_PROFILE_ACTIVATION,
-				Arrays.asList(classpathProfile));
+				Collections.singletonList(classpathProfile));
 		ConfigDataEnvironmentContributor root = createBoundContributor("root");
 		root = root.withChildren(ImportPhase.BEFORE_PROFILE_ACTIVATION, Arrays.asList(fileImports, classpathImports));
 		assertThat(asLocationsList(root.iterator())).containsExactly("file:application-profile.properties",
@@ -222,6 +234,21 @@ class ConfigDataEnvironmentContributorTests {
 				Collections.singletonList(child));
 		assertThat(root.getChildren(ImportPhase.BEFORE_PROFILE_ACTIVATION)).isEmpty();
 		assertThat(withChildren.getChildren(ImportPhase.BEFORE_PROFILE_ACTIVATION)).containsExactly(child);
+	}
+
+	@Test
+	void withChildrenAfterProfileActivationMovesProfileSpecificChildren() {
+		ConfigDataEnvironmentContributor root = createBoundContributor("root");
+		ConfigDataEnvironmentContributor child1 = createBoundContributor("child1");
+		ConfigDataEnvironmentContributor grandchild = createBoundContributor(new TestResource("grandchild"),
+				new ConfigData(Collections.singleton(new MockPropertySource()),
+						PropertySourceOptions.always(Option.PROFILE_SPECIFIC)),
+				0);
+		child1 = child1.withChildren(ImportPhase.BEFORE_PROFILE_ACTIVATION, Collections.singletonList(grandchild));
+		root = root.withChildren(ImportPhase.BEFORE_PROFILE_ACTIVATION, Collections.singletonList(child1));
+		ConfigDataEnvironmentContributor child2 = createBoundContributor("child2");
+		root = root.withChildren(ImportPhase.AFTER_PROFILE_ACTIVATION, Collections.singletonList(child2));
+		assertThat(asLocationsList(root.iterator())).containsExactly("grandchild", "child2", "child1", "root");
 	}
 
 	@Test

@@ -164,7 +164,7 @@
     },
     {
       "name": "server.servlet.session.cookie.domain",
-      "description": " Domain for the session cookie."
+      "description": "Domain for the session cookie."
     },
     {
       "name": "server.servlet.session.cookie.http-only",
@@ -376,9 +376,13 @@
       "type": "java.lang.Boolean",
       "description": "Create the required batch tables on startup if necessary. Enabled automatically\n if no custom table prefix is set or if a custom schema is configured.",
       "deprecation": {
-        "replacement": "spring.batch.initialize-schema",
+        "replacement": "spring.batch.jdbc.initialize-schema",
         "level": "error"
       }
+    },
+    {
+      "name": "spring.batch.jdbc.initialize-schema",
+      "defaultValue": "embedded"
     },
     {
       "name": "spring.batch.job.enabled",
@@ -508,6 +512,14 @@
       "defaultValue": "none"
     },
     {
+      "name": "spring.data.cassandra.connection.connection-timeout",
+      "defaultValue": "5s"
+    },
+    {
+      "name": "spring.data.cassandra.connection.init-query-timeout",
+      "defaultValue": "5s"
+    },
+    {
       "name": "spring.data.cassandra.contact-points",
       "defaultValue": [
         "127.0.0.1:9042"
@@ -562,6 +574,14 @@
       "defaultValue": "auto"
     },
     {
+      "name": "spring.data.cassandra.request.page-size",
+      "defaultValue": 5000
+    },
+    {
+      "name": "spring.data.cassandra.request.timeout",
+      "defaultValue": "2s"
+    },
+    {
       "name": "spring.data.cassandra.request.throttler.type",
       "defaultValue": "none"
     },
@@ -572,6 +592,14 @@
       "deprecation": {
         "level": "error"
       }
+    },
+    {
+      "name": "spring.data.cassandra.pool.heartbeat-interval",
+      "defaultValue": "30s"
+    },
+    {
+      "name": "spring.data.cassandra.pool.idle-timeout",
+      "defaultValue": "5s"
     },
     {
       "name": "spring.data.couchbase.consistency",
@@ -1715,6 +1743,20 @@
       ]
     },
     {
+      "name": "spring.sql.init.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether basic script-based initialization of an SQL database is enabled.",
+      "defaultValue": true,
+      "deprecation": {
+        "replacement": "spring.sql.init.mode",
+        "level": "warning"
+      }
+    },
+    {
+      "name": "spring.sql.init.mode",
+      "defaultValue": "embedded"
+    },
+    {
       "name": "spring.thymeleaf.prefix",
       "defaultValue": "classpath:/templates/"
     },
@@ -1733,9 +1775,17 @@
       "defaultValue": false
     },
     {
+      "name": "spring.webflux.session.cookie.same-site",
+      "defaultValue": "lax"
+    },
+    {
       "name": "spring.webservices.wsdl-locations",
       "type": "java.util.List<java.lang.String>",
       "description": "Comma-separated list of locations of WSDLs and accompanying XSDs to be exposed as beans."
+    },
+    {
+      "name": "spring.netty.leak-detection",
+      "defaultValue": "disabled"
     }
   ],
   "hints": [
@@ -2136,6 +2186,28 @@
       "providers": [
         {
           "name": "any"
+        }
+      ]
+    },
+    {
+      "name": "spring.sql.init.data-locations",
+      "providers": [
+        {
+          "name": "handle-as",
+          "parameters": {
+            "target": "java.util.List<org.springframework.core.io.Resource>"
+          }
+        }
+      ]
+    },
+    {
+      "name": "spring.sql.init.schema-locations",
+      "providers": [
+        {
+          "name": "handle-as",
+          "parameters": {
+            "target": "java.util.List<org.springframework.core.io.Resource>"
+          }
         }
       ]
     },

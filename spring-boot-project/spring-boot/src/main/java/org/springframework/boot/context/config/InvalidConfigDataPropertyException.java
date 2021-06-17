@@ -43,6 +43,8 @@ public class InvalidConfigDataPropertyException extends ConfigDataException {
 		Map<ConfigurationPropertyName, ConfigurationPropertyName> warnings = new LinkedHashMap<>();
 		warnings.put(ConfigurationPropertyName.of("spring.profiles"),
 				ConfigurationPropertyName.of("spring.config.activate.on-profile"));
+		warnings.put(ConfigurationPropertyName.of("spring.profiles[0]"),
+				ConfigurationPropertyName.of("spring.config.activate.on-profile"));
 		WARNINGS = Collections.unmodifiableMap(warnings);
 	}
 
@@ -50,8 +52,11 @@ public class InvalidConfigDataPropertyException extends ConfigDataException {
 	static {
 		Set<ConfigurationPropertyName> errors = new LinkedHashSet<>();
 		errors.add(Profiles.INCLUDE_PROFILES);
+		errors.add(Profiles.INCLUDE_PROFILES.append("[0]"));
 		errors.add(ConfigurationPropertyName.of(AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME));
+		errors.add(ConfigurationPropertyName.of(AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME + "[0]"));
 		errors.add(ConfigurationPropertyName.of(AbstractEnvironment.DEFAULT_PROFILES_PROPERTY_NAME));
+		errors.add(ConfigurationPropertyName.of(AbstractEnvironment.DEFAULT_PROFILES_PROPERTY_NAME + "[0]"));
 		PROFILE_SPECIFIC_ERRORS = Collections.unmodifiableSet(errors);
 	}
 
@@ -96,7 +101,7 @@ public class InvalidConfigDataPropertyException extends ConfigDataException {
 	}
 
 	/**
-	 * Throw a {@link InvalidConfigDataPropertyException} or log a warning if the given
+	 * Throw an {@link InvalidConfigDataPropertyException} or log a warning if the given
 	 * {@link ConfigDataEnvironmentContributor} contains any invalid property. A warning
 	 * is logged if the property is still supported, but not recommended. An error is
 	 * thrown if the property is completely unsupported.
@@ -112,7 +117,8 @@ public class InvalidConfigDataPropertyException extends ConfigDataException {
 					logger.warn(getMessage(property, false, replacement, contributor.getResource()));
 				}
 			});
-			if (contributor.isProfileSpecific() && contributor.isNotIgnoringProfiles()) {
+			if (contributor.isFromProfileSpecificImport()
+					&& !contributor.hasConfigDataOption(ConfigData.Option.IGNORE_PROFILES)) {
 				PROFILE_SPECIFIC_ERRORS.forEach((name) -> {
 					ConfigurationProperty property = propertySource.getConfigurationProperty(name);
 					if (property != null) {
